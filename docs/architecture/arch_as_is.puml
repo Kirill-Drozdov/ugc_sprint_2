@@ -1,0 +1,37 @@
+@startuml
+skinparam componentStyle uml2
+actor Администратор_киносервиса as Admin
+actor Пользователь as User
+component AdminPanel
+component PostgresToES_ETL
+component AuthAPI
+component AsyncAPI
+component UGC_API
+component AdminNginx
+component UserNginx
+component UGC_ETL
+database PostgresAdmin
+database PostgresAuth
+database Kafka
+database ClickHouse
+database Redis
+database ElasticSearch
+
+Admin -up-> AdminNginx: Наполнение сервиса контентом
+User -up-> UserNginx: Просмотр контента
+AdminNginx -> AdminPanel
+UserNginx -up-> AsyncAPI
+AsyncAPI -up-> UGC_API
+UGC_API -up-> Kafka
+UGC_ETL -> Kafka
+UGC_ETL -up-> ClickHouse
+AdminPanel -up-> AuthAPI: Аутентификация и авторизация
+AsyncAPI -> AuthAPI: Аутентификация и авторизация
+AsyncAPI -> ElasticSearch: Быстрый поиск контента
+AdminPanel -> PostgresAdmin: Сохранение контента в БД
+PostgresToES_ETL -down-> PostgresAdmin: Забирает данные из БД 
+PostgresToES_ETL -up-> ElasticSearch: Сохраняет преобразованные данные в ES
+AuthAPI -up-> PostgresAuth
+AuthAPI -up-> Redis: Хранение невалидных токенов
+AsyncAPI -up-> Redis: Кеширование запросов
+@enduml
