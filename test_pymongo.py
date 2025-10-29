@@ -27,22 +27,7 @@ def delete_document(*, collection: Collection, condition: dict):
 
 if __name__ == '__main__':
     # Создание клиента
-    client = MongoClient('localhost', 27017)
+    client = MongoClient('localhost', 27019)
 
     # Подключение к базе данных
-    db = client['UsersDB']
-
-    user_dict = {'name': 'Илья Муромец', 'age': 23}
-    user_id = insert_document(collection=db.users, data=user_dict)
-    print(f'Добавлен пользователь с ID: {user_id}')
-
-    found_user = find(collection=db.users, condition={'_id': user_id})
-    print(f'Найден пользователь {found_user}')
-
-    update_document(collection=db.users, condition={
-                    '_id': user_id}, new_values={'name': 'Соловей Разбойник'})
-
-    found_users = find(collection=db.users, condition={}, multiple=True)
-
-    if found_users is not None:
-        print(f'Список пользователей {found_users[:2]}')
+    db = client['ugc']
