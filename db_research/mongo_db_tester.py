@@ -1,12 +1,14 @@
 import time
 import random
+import uuid
 from datetime import datetime
 from typing import Any, List, Dict
 from faker import Faker
 from pymongo import MongoClient
 from pymongo.collection import Collection
+from pymongo.errors import BulkWriteError
 
-# Статистика производительности
+# Статистика производительности.
 performance_stats = {}
 
 
@@ -48,8 +50,38 @@ class MongoDBTester:
         return res.inserted_id
 
     def insert_many_documents(self, *, collection: Collection, data: List[dict]) -> List[Any]:
-        res = collection.insert_many(data)
-        return res.inserted_ids
+        """Безопасная вставка множества документов с обработкой ошибок дубликатов"""
+        try:
+            res = collection.insert_many(data, ordered=False)
+            return res.inserted_ids
+        except BulkWriteError as e:
+            # Игнорируем ошибки дубликатов, продолжаем с успешными вставками
+            inserted_ids = [op['_id']
+                            for op in e.details['writeErrors'] if 'insertedIds' in op]
+            print(
+                f"⚠️  Вставлено {len(inserted_ids)} документов, пропущено {len(e.details['writeErrors'])} дубликатов")
+            return inserted_ids
+
+    def insert_many_safe(self, *, collection: Collection, data: List[dict], batch_size: int = 1000) -> int:
+        """Безопасная вставка больших объемов данных с пакетной обработкой"""
+        total_inserted = 0
+        for i in range(0, len(data), batch_size):
+            batch = data[i:i + batch_size]
+            try:
+                result = collection.insert_many(batch, ordered=False)
+                total_inserted += len(result.inserted_ids)
+                print(
+                    f"📦 Вставлено {len(result.inserted_ids)} документов (батч {i // batch_size + 1})")
+            except BulkWriteError as e:
+                # Подсчитываем успешные вставки
+                inserted_count = e.details['nInserted']
+                total_inserted += inserted_count
+                print(
+                    f"📦 Вставлено {inserted_count} документов (батч {i // batch_size + 1}), пропущено {len(e.details['writeErrors'])} дубликатов")
+            except Exception as e:
+                print(f"❌ Ошибка при вставке батча {i // batch_size + 1}: {e}")
+
+        return total_inserted
 
     def find(self, *, collection: Collection, condition: dict, multiple: bool = False):
         if multiple:
@@ -64,32 +96,46 @@ class MongoDBTester:
         collection.delete_one(condition)
 
     @measure_time("Генерация тестовых пользователей")
-    def generate_test_users(self, count: int = 100) -> List[Dict]:
-        """Генерация тестовых пользователей"""
+    def generate_test_users(self, count: int = 10000) -> List[Dict]:
+        """Генерация тестовых пользователей с гарантированно уникальными email"""
         users = []
+        used_emails = set()
+
         for i in range(count):
+            # Генерация гарантированно уникального email
+            base_email = self.fake.email()
+            unique_email = f"user{i + 1}_{base_email}"
+
+            # Дополнительная проверка на уникальность
+            while unique_email in used_emails:
+                unique_email = f"user{i + 1}_{uuid.uuid4().hex[:8]}_{self.fake.email()}"
+
+            used_emails.add(unique_email)
+
             user = {
                 "user_id": f"user_{i + 1}",
-                "username": self.fake.user_name(),
-                "email": self.fake.email(),
+                "username": f"user_{i + 1}_{self.fake.user_name()}",
+                "email": unique_email,
                 "first_name": self.fake.first_name(),
                 "last_name": self.fake.last_name(),
                 "created_at": self.fake.date_time_between(start_date="-2y", end_date="now"),
                 "last_login": self.fake.date_time_between(start_date="-30d", end_date="now"),
                 "profile": {
                     "bio": self.fake.text(max_nb_chars=200),
-                    "avatar_url": self.fake.image_url(),
+                    "avatar_url": f"https://picsum.photos/200/200?random={i}",
                     "location": self.fake.city()
                 }
             }
             users.append(user)
 
-        self.insert_many_documents(collection=self.users, data=users)
-        print(f"✅ Создано {count} тестовых пользователей")
-        return users
+        total_inserted = self.insert_many_safe(
+            collection=self.users, data=users, batch_size=1000)
+        print(f"✅ Создано {total_inserted} тестовых пользователей")
+        # Возвращаем только вставленные пользователи
+        return users[:total_inserted]
 
     @measure_time("Генерация тестовых фильмов")
-    def generate_test_movies(self, count: int = 200) -> List[Dict]:
+    def generate_test_movies(self, count: int = 20000) -> List[Dict]:
         """Генерация тестовых фильмов"""
         genres = ["Action", "Comedy", "Drama", "Thriller", "Sci-Fi",
                   "Horror", "Romance", "Documentary", "Animation", "Fantasy"]
@@ -98,7 +144,7 @@ class MongoDBTester:
         for i in range(count):
             movie = {
                 "movie_id": f"movie_{i + 1}",
-                "title": self.fake.sentence(nb_words=3),
+                "title": f"{self.fake.sentence(nb_words=3)} ({i + 1})",
                 "description": self.fake.text(max_nb_chars=300),
                 "release_year": random.randint(1980, 2023),
                 "genres": random.sample(genres, random.randint(1, 3)),
@@ -109,19 +155,24 @@ class MongoDBTester:
                 "language": self.fake.language_name(),
                 "budget": random.randint(1000000, 200000000),
                 "created_at": self.fake.date_time_between(start_date="-1y", end_date="now"),
-                "poster_url": self.fake.image_url(),
+                "poster_url": f"https://picsum.photos/300/450?random={i}",
                 "imdb_rating": round(random.uniform(3.0, 9.5), 1)
             }
             movies.append(movie)
 
-        self.insert_many_documents(collection=self.movies, data=movies)
-        print(f"✅ Создано {count} тестовых фильмов")
-        return movies
+        total_inserted = self.insert_many_safe(
+            collection=self.movies, data=movies, batch_size=1000)
+        print(f"✅ Создано {total_inserted} тестовых фильмов")
+        return movies[:total_inserted]
 
     @measure_time("Генерация оценок фильмов")
     def generate_movie_ratings(self, users: List[Dict], movies: List[Dict], ratings_per_user: int = 20):
         """Генерация оценок фильмов пользователями"""
         ratings = []
+
+        if not users or not movies:
+            print("⚠️  Нет пользователей или фильмов для генерации оценок")
+            return
 
         for user in users:
             # Каждый пользователь оценивает случайные фильмы
@@ -132,7 +183,6 @@ class MongoDBTester:
                 rating = {
                     "user_id": user["user_id"],
                     "movie_id": movie["movie_id"],
-                    # 0-10, где 10 - лайк, 0 - дизлайк
                     "rating": random.randint(0, 10),
                     "created_at": self.fake.date_time_between(
                         start_date=user["created_at"],
@@ -145,14 +195,18 @@ class MongoDBTester:
                 }
                 ratings.append(rating)
 
-        self.insert_many_documents(collection=self.movie_ratings, data=ratings)
-        print(f"✅ Создано {len(ratings)} оценок фильмов")
+        total_inserted = self.insert_many_safe(
+            collection=self.movie_ratings, data=ratings, batch_size=2000)
+        print(f"✅ Создано {total_inserted} оценок фильмов")
 
     @measure_time("Генерация рецензий")
     def generate_reviews(self, users: List[Dict], movies: List[Dict], reviews_per_user: int = 5):
         """Генерация рецензий на фильмы"""
         reviews = []
-        review_id_counter = 1
+
+        if not users or not movies:
+            print("⚠️  Нет пользователей или фильмов для генерации рецензий")
+            return []
 
         for user in users:
             # Каждый пользователь пишет рецензии на случайные фильмы
@@ -161,11 +215,12 @@ class MongoDBTester:
 
             for movie in reviewed_movies:
                 review = {
-                    "review_id": f"review_{review_id_counter}",
+                    "review_id": f"review_{len(reviews) + 1}",
                     "user_id": user["user_id"],
                     "movie_id": movie["movie_id"],
                     "title": self.fake.sentence(nb_words=6),
-                    "text": self.fake.text(max_nb_chars=1000),
+                    # Уменьшил длину для производительности
+                    "text": self.fake.text(max_nb_chars=500),
                     "rating": random.randint(1, 10),
                     "contains_spoilers": random.choice([True, False]),
                     "created_at": self.fake.date_time_between(
@@ -180,28 +235,36 @@ class MongoDBTester:
                     "dislikes_count": 0
                 }
                 reviews.append(review)
-                review_id_counter += 1
 
-        self.insert_many_documents(collection=self.reviews, data=reviews)
-        print(f"✅ Создано {len(reviews)} рецензий")
-        return reviews
+        total_inserted = self.insert_many_safe(
+            collection=self.reviews, data=reviews, batch_size=2000)
+        print(f"✅ Создано {total_inserted} рецензий")
+        return reviews[:total_inserted]
 
     @measure_time("Генерация лайков рецензий")
     def generate_review_likes(self, users: List[Dict], reviews: List[Dict], likes_per_user: int = 10):
         """Генерация лайков/дизлайков рецензий"""
         review_likes = []
 
+        if not users or not reviews:
+            print("⚠️  Нет пользователей или рецензий для генерации лайков")
+            return
+
         for user in users:
             # Пользователь лайкает случайные рецензии (кроме своих)
             user_reviews = [
                 r for r in reviews if r["user_id"] != user["user_id"]]
+
+            if not user_reviews:
+                continue
+
             liked_reviews = random.sample(
                 user_reviews,
                 min(likes_per_user, len(user_reviews))
             )
 
             for review in liked_reviews:
-                like_value = random.choice([0, 10])  # 0 - дизлайк, 10 - лайк
+                like_value = random.choice([0, 10])
                 review_like = {
                     "user_id": user["user_id"],
                     "review_id": review["review_id"],
@@ -213,26 +276,45 @@ class MongoDBTester:
                 }
                 review_likes.append(review_like)
 
-                # Обновляем счетчик лайков в рецензии
-                if like_value == 10:
-                    self.reviews.update_one(
-                        {"review_id": review["review_id"]},
-                        {"$inc": {"likes_count": 1}}
-                    )
-                else:
-                    self.reviews.update_one(
-                        {"review_id": review["review_id"]},
-                        {"$inc": {"dislikes_count": 1}}
-                    )
+        # Вставляем лайки
+        total_inserted = self.insert_many_safe(
+            collection=self.review_likes, data=review_likes, batch_size=2000)
+        print(f"✅ Создано {total_inserted} лайков/дизлайков рецензий")
 
-        self.insert_many_documents(
-            collection=self.review_likes, data=review_likes)
-        print(f"✅ Создано {len(review_likes)} лайков/дизлайков рецензий")
+        # Обновляем счетчики лайков в рецензиях
+        self._update_review_likes_counters(review_likes)
+
+    def _update_review_likes_counters(self, review_likes: List[Dict]):
+        """Обновление счетчиков лайков в рецензиях"""
+        review_stats = {}
+        for like in review_likes:
+            review_id = like["review_id"]
+            if review_id not in review_stats:
+                review_stats[review_id] = {"likes": 0, "dislikes": 0}
+
+            if like["like_value"] == 10:
+                review_stats[review_id]["likes"] += 1
+            else:
+                review_stats[review_id]["dislikes"] += 1
+
+        # Пакетное обновление счетчиков
+        for review_id, stats in review_stats.items():
+            self.reviews.update_one(
+                {"review_id": review_id},
+                {"$set": {
+                    "likes_count": stats["likes"],
+                    "dislikes_count": stats["dislikes"]
+                }}
+            )
 
     @measure_time("Генерация закладок")
     def generate_bookmarks(self, users: List[Dict], movies: List[Dict], bookmarks_per_user: int = 8):
         """Генерация закладок пользователей"""
         bookmarks = []
+
+        if not users or not movies:
+            print("⚠️  Нет пользователей или фильмов для генерации закладок")
+            return
 
         for user in users:
             # Пользователь добавляет случайные фильмы в закладки
@@ -251,18 +333,21 @@ class MongoDBTester:
                 }
                 bookmarks.append(bookmark)
 
-        self.insert_many_documents(collection=self.bookmarks, data=bookmarks)
-        print(f"✅ Создано {len(bookmarks)} закладок")
+        total_inserted = self.insert_many_safe(
+            collection=self.bookmarks, data=bookmarks, batch_size=2000)
+        print(f"✅ Создано {total_inserted} закладок")
 
     @measure_time("ТЕСТ: Поиск пользователя по email")
     def test_find_user_by_email(self):
         """Тест поиска пользователя по email"""
-        email = self.users.find_one()["email"]
-        result = self.find(
-            collection=self.users,
-            condition={"email": email}
-        )
-        return result is not None
+        user = self.users.find_one()
+        if user:
+            result = self.find(
+                collection=self.users,
+                condition={"email": user["email"]}
+            )
+            return result is not None
+        return False
 
     @measure_time("ТЕСТ: Поиск фильмов по жанру")
     def test_find_movies_by_genre(self):
@@ -292,22 +377,26 @@ class MongoDBTester:
     @measure_time("ТЕСТ: Поиск рецензий с сортировкой по дате")
     def test_find_reviews_sorted(self):
         """Тест поиска рецензий с сортировкой"""
-        movie_id = self.movies.find_one()["movie_id"]
-        results = list(self.reviews.find(
-            {"movie_id": movie_id}
-        ).sort("created_at", -1).limit(20))
-        return len(results)
+        movie = self.movies.find_one()
+        if movie:
+            results = list(self.reviews.find(
+                {"movie_id": movie["movie_id"]}
+            ).sort("created_at", -1).limit(20))
+            return len(results)
+        return 0
 
     @measure_time("ТЕСТ: Получение закладок пользователя")
     def test_get_user_bookmarks(self):
         """Тест получения закладок пользователя"""
-        user_id = self.users.find_one()["user_id"]
-        results = self.find(
-            collection=self.bookmarks,
-            condition={"user_id": user_id},
-            multiple=True
-        )
-        return len(results)
+        user = self.users.find_one()
+        if user:
+            results = self.find(
+                collection=self.bookmarks,
+                condition={"user_id": user["user_id"]},
+                multiple=True
+            )
+            return len(results)
+        return 0
 
     @measure_time("ТЕСТ: Получение популярных рецензий")
     def test_get_popular_reviews(self):
@@ -370,19 +459,32 @@ class MongoDBTester:
                 print(f"❌ {test.__name__} - Ошибка: {e}")
 
     def generate_all_test_data(self):
-        """Генерация всех тестовых данных"""
+        """Генерация всех тестовых данных с контролируемыми объемами"""
         print("🎭 Начало генерации тестовых данных...")
         print("=" * 50)
 
-        # Генерация базовых данных
-        users = self.generate_test_users(100_000)
-        movies = self.generate_test_movies(200_000)
+        # Генерация базовых данных с реалистичными объемами
+        print("👥 Генерация пользователей...")
+        users = self.generate_test_users(10000)  # 10K пользователей
 
-        # Генерация связных данных
-        self.generate_movie_ratings(users, movies, 20_000)
-        reviews = self.generate_reviews(users, movies, 5_000)
-        self.generate_review_likes(users, reviews, 10_000)
-        self.generate_bookmarks(users, movies, 8_000)
+        print("🎬 Генерация фильмов...")
+        movies = self.generate_test_movies(20000)  # 20K фильмов
+
+        # Генерация связных данных с реалистичными соотношениями
+        print("⭐ Генерация оценок...")
+        # 20 оценок на пользователя
+        self.generate_movie_ratings(users, movies, 20)
+
+        print("📝 Генерация рецензий...")
+        reviews = self.generate_reviews(
+            users, movies, 5)  # 5 рецензий на пользователя
+
+        print("👍 Генерация лайков рецензий...")
+        # 10 лайков на пользователя
+        self.generate_review_likes(users, reviews, 10)
+
+        print("🔖 Генерация закладок...")
+        self.generate_bookmarks(users, movies, 8)  # 8 закладок на пользователя
 
         print("✅ Все тестовые данные сгенерированы!")
 
@@ -403,25 +505,82 @@ class MongoDBTester:
         print("=" * 35)
 
         for operation, times in performance_stats.items():
-            avg_time = sum(times) / len(times)
-            max_time = max(times)
-            min_time = min(times)
-            print(f"\n{operation}:")
-            print(f"  Среднее: {avg_time:.4f} сек")
-            print(f"  Максимум: {max_time:.4f} сек")
-            print(f"  Минимум: {min_time:.4f} сек")
-            print(f"  Количество выполнений: {len(times)}")
+            if times:  # Проверяем, что есть данные
+                avg_time = sum(times) / len(times)
+                max_time = max(times)
+                min_time = min(times)
+                print(f"\n{operation}:")
+                print(f"  Среднее: {avg_time:.4f} сек")
+                print(f"  Максимум: {max_time:.4f} сек")
+                print(f"  Минимум: {min_time:.4f} сек")
+                print(f"  Количество выполнений: {len(times)}")
 
     def cleanup_test_data(self):
         """Очистка тестовых данных"""
         print("🧹 Очистка тестовых данных...")
-        self.users.delete_many({})
-        self.movies.delete_many({})
-        self.movie_ratings.delete_many({})
-        self.reviews.delete_many({})
-        self.review_likes.delete_many({})
-        self.bookmarks.delete_many({})
-        print("✅ Все тестовые данные удалены!")
+        try:
+            # Удаляем данные в правильном порядке из-за foreign key constraints
+            self.review_likes.delete_many({})
+            self.bookmarks.delete_many({})
+            self.reviews.delete_many({})
+            self.movie_ratings.delete_many({})
+            self.users.delete_many({})
+            self.movies.delete_many({})
+            print("✅ Все тестовые данные удалены!")
+        except Exception as e:
+            print(f"⚠️  Ошибка при очистке данных: {e}")
+
+    def drop_indexes(self):
+        """Удаление индексов для ускорения вставки больших объемов данных"""
+        print("🗑️  Временное удаление индексов для ускорения вставки...")
+        try:
+            self.users.drop_indexes()
+            self.movies.drop_indexes()
+            self.movie_ratings.drop_indexes()
+            self.reviews.drop_indexes()
+            self.review_likes.drop_indexes()
+            self.bookmarks.drop_indexes()
+            print("✅ Индексы временно удалены")
+        except Exception as e:
+            print(f"⚠️  Ошибка при удалении индексов: {e}")
+
+    def recreate_indexes(self):
+        """Восстановление индексов после вставки данных"""
+        print("🔧 Восстановление индексов...")
+        try:
+            # Пользователи
+            self.users.create_index([("user_id", 1)], unique=True)
+            self.users.create_index([("email", 1)], unique=True)
+            self.users.create_index([("username", 1)])
+
+            # Фильмы
+            self.movies.create_index([("movie_id", 1)], unique=True)
+            self.movies.create_index([("title", 1)])
+            self.movies.create_index([("release_year", -1)])
+            self.movies.create_index([("genres", 1)])
+
+            # Оценки
+            self.movie_ratings.create_index(
+                [("user_id", 1), ("movie_id", 1)], unique=True)
+            self.movie_ratings.create_index([("movie_id", 1), ("rating", 1)])
+
+            # Рецензии
+            self.reviews.create_index([("review_id", 1)], unique=True)
+            self.reviews.create_index([("user_id", 1), ("movie_id", 1)])
+            self.reviews.create_index([("movie_id", 1), ("created_at", -1)])
+            self.reviews.create_index([("text", "text")])
+
+            # Лайки рецензий
+            self.review_likes.create_index(
+                [("user_id", 1), ("review_id", 1)], unique=True)
+
+            # Закладки
+            self.bookmarks.create_index(
+                [("user_id", 1), ("movie_id", 1)], unique=True)
+
+            print("✅ Индексы восстановлены")
+        except Exception as e:
+            print(f"⚠️  Ошибка при восстановлении индексов: {e}")
 
 
 def main():
@@ -429,11 +588,17 @@ def main():
     tester = MongoDBTester()
 
     try:
-        # Очистка старых данных (опционально)
+        # Очистка старых данных
         tester.cleanup_test_data()
+
+        # Временное удаление индексов для ускорения массовой вставки
+        tester.drop_indexes()
 
         # Генерация тестовых данных
         tester.generate_all_test_data()
+
+        # Восстановление индексов
+        tester.recreate_indexes()
 
         # Вывод статистики
         tester.print_statistics()
@@ -446,6 +611,8 @@ def main():
 
     except Exception as e:
         print(f"❌ Ошибка: {e}")
+        import traceback
+        traceback.print_exc()
     finally:
         # Закрытие соединения
         tester.client.close()
