@@ -1,0 +1,48 @@
+services:
+  db_auth_test:
+    image: postgres:16.0
+    ports:
+      - "5434:5434"
+    volumes:
+    # При отладке отдельно можно использовать готовый бекап.
+      # - ./data:/docker-entrypoint-initdb.d
+      - auth_postgres_data:/var/lib/postgresql/data
+    env_file:
+      - ./.env
+  auth_redis_test:
+    image: redis:5.0.4
+    ports:
+      - "6379:6379"
+    container_name: auth_redis
+    volumes:
+      - auth_redis_data:/data
+    command: redis-server --save 60 1 --loglevel notice
+  auth_api_test:
+    # Помечаем сервис через отдельный профиль, чтобы пропускать его при сборке
+    # на время разработки или внесения правок по ревью.
+    # profiles: ["disabled"]
+    build:
+      context: ../../.
+    ports:
+      - "8888:8888"
+    image: auth_api-image
+    depends_on:
+      - auth_redis_test
+      - db_auth_test
+    env_file:
+      - ./.env
+  tests:
+    # Помечаем сервис через отдельный профиль, чтобы пропускать его при сборке
+    # на время разработки или внесения правок по ревью.
+    # profiles: ["disabled"]
+    image: auth_api-image
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    entrypoint: >
+      sh -c "pip install -r tests/functional/requirements.txt
+      && python3 -m tests.functional.utils.wait_for_redis
+      && pytest tests/functional/src"
+
+volumes:
+  auth_postgres_data:
+  auth_redis_data:
