@@ -129,3 +129,48 @@ services:
       - "27017"
     volumes:
       - /etc/localtime:/etc/localtime:ro
+
+  mongo_init:
+    container_name: mongo_init
+    image: mongo
+    depends_on:
+      - mongors1n1
+      - mongors1n2
+      - mongors1n3
+      - mongors2n1
+      - mongors2n2
+      - mongors2n3
+      - mongocfg1
+      - mongocfg2
+      - mongocfg3
+      - mongos1
+      - mongos2
+    volumes:
+      - ./scripts/init-cluster.sh:/scripts/init-cluster.sh
+    working_dir: /scripts
+    entrypoint: ["/bin/bash", "-c"]
+    command: |
+      "
+      chmod +x /scripts/init-cluster.sh &&
+      /scripts/init-cluster.sh
+      "
+  ugc_api:
+    build:
+      context: ./src/.
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongo_init
+      - mongos1
+      - mongos2
+    env_file:
+      - ./src/.env
+  # nginx:
+  #   image: nginx:1.25.3
+  #   ports:
+  #     - "80:80"
+  #   volumes:
+  #     - ./nginx/site.conf:/etc/nginx/conf.d/default.conf:ro
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #   depends_on:
+  #     - ugc_api

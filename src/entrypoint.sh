@@ -1,10 +1,8 @@
 #!/bin/bash
 
-while ! nc -z $POSTGRES_HOST $PGPORT; do
-      sleep 0.1
+while ! nc -z $mongo_host $mongo_port; do
+      echo "Установка соединения с Mongo $mongo_host $mongo_port"
+      sleep 2
 done 
-
-echo Applying migrations...
-alembic upgrade head
 
 exec "$@"
