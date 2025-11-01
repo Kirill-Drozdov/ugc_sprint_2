@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from schemas.review import Review, ReviewCreate, ReviewResponse, ReviewUpdate
+from schemas.review import ReviewCreate, ReviewResponse, ReviewUpdate
 from services.review import ReviewService
 
 router = APIRouter()
@@ -20,7 +20,7 @@ router = APIRouter()
 async def create_review(
     review: ReviewCreate,
     logger: logging.Logger = Depends(logging.getLogger),
-) -> Review:
+) -> ReviewResponse:
     """Создание рецензии на кинопроизведение.
 
     - **filmwork_id**: идентификатор кинопроизведения.
@@ -30,7 +30,8 @@ async def create_review(
     - **rating**: оценка от 0 до 10 (опционально).
     """
     try:
-        return await ReviewService.create_review(review)
+        new_review = await ReviewService.create_review(review)
+        return await ReviewService.get_review(new_review.id, review.user_id)
     except HTTPException:
         raise
     except Exception as error:
@@ -48,11 +49,16 @@ async def create_review(
 async def update_review(
     review_id: UUID,
     review_data: ReviewUpdate,
+    user_id: UUID | None = None,
     logger: logging.Logger = Depends(logging.getLogger),
-) -> Review:
+) -> ReviewResponse:
     """Обновление рецензии."""
     try:
-        return await ReviewService.update_review(review_id, review_data)
+        updated_review = await ReviewService.update_review(
+            review_id,
+            review_data,
+        )
+        return await ReviewService.get_review(updated_review.id, user_id)
     except HTTPException:
         raise
     except Exception as error:
@@ -69,11 +75,12 @@ async def update_review(
 )
 async def get_review(
     review_id: UUID,
+    user_id: UUID | None = None,
     logger: logging.Logger = Depends(logging.getLogger),
-) -> Review:
+) -> ReviewResponse:
     """Получение рецензии по ID."""
     try:
-        return await ReviewService.get_review(review_id)
+        return await ReviewService.get_review(review_id, user_id)
     except HTTPException:
         raise
     except Exception as error:
@@ -90,15 +97,20 @@ async def get_review(
 )
 async def get_filmwork_reviews(
     filmwork_id: UUID,
+    user_id: UUID | None = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     sort_by: str = Query('created_at', regex='^(created_at|rating)$'),
     logger: logging.Logger = Depends(logging.getLogger),
-) -> list[Review]:
+) -> list[ReviewResponse]:
     """Получение рецензий для кинопроизведения с сортировкой."""
     try:
         return await ReviewService.get_filmwork_reviews(
-            filmwork_id, skip, limit, sort_by,
+            filmwork_id,
+            user_id,
+            skip,
+            limit,
+            sort_by,
         )
     except Exception as error:
         logger.error(f'Ошибка при получении рецензий: {error}')
@@ -114,11 +126,12 @@ async def get_filmwork_reviews(
 )
 async def get_user_reviews(
     user_id: UUID,
+    current_user_id: UUID | None = None,
     logger: logging.Logger = Depends(logging.getLogger),
-) -> list[Review]:
+) -> list[ReviewResponse]:
     """Получение всех рецензий пользователя."""
     try:
-        return await ReviewService.get_user_reviews(user_id)
+        return await ReviewService.get_user_reviews(user_id, current_user_id)
     except Exception as error:
         logger.error(f'Ошибка при получении рецензий пользователя: {error}')
         raise
@@ -133,11 +146,14 @@ async def get_user_reviews(
 )
 async def delete_review(
     review_id: UUID,
+    user_id: UUID | None = None,
     logger: logging.Logger = Depends(logging.getLogger),
-) -> Review:
+) -> ReviewResponse:
     """Удаление рецензии."""
     try:
-        return await ReviewService.delete_review(review_id)
+        review = await ReviewService.get_review(review_id, user_id)
+        await ReviewService.delete_review(review_id)
+        return review
     except HTTPException:
         raise
     except Exception as error:

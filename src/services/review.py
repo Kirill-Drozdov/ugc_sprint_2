@@ -1,11 +1,14 @@
 from datetime import datetime, timezone
 from http import HTTPStatus
 import logging
+from typing import Optional
 from uuid import UUID
 
 from fastapi import HTTPException
 
-from schemas.review import Review, ReviewCreate, ReviewUpdate
+from db.models import Review
+from schemas.review import ReviewCreate, ReviewResponse, ReviewUpdate
+from services.review_like import ReviewLikeService
 
 
 class ReviewService:
@@ -82,8 +85,9 @@ class ReviewService:
     async def get_review(
         cls,
         review_id: UUID,
-    ) -> Review:
-        """Возвращает рецензию по ID."""
+        user_id: Optional[UUID] = None,
+    ) -> ReviewResponse:
+        """Возвращает рецензию по ID с информацией о лайках."""
         review = await Review.get(review_id)
 
         if review is None:
@@ -92,16 +96,28 @@ class ReviewService:
                 detail='Рецензия не найдена',
             )
 
-        return review
+        # Получаем информацию о лайках
+        like_summary = await ReviewLikeService.get_review_like_summary(
+            review_id,
+            user_id,
+        )
+
+        return ReviewResponse(
+            **review.dict(),
+            likes_count=like_summary.likes_count,
+            dislikes_count=like_summary.dislikes_count,
+            user_vote=like_summary.user_vote,
+        )
 
     @classmethod
     async def get_filmwork_reviews(
         cls,
         filmwork_id: UUID,
+        user_id: Optional[UUID] = None,
         skip: int = 0,
         limit: int = 50,
         sort_by: str = 'created_at',
-    ) -> list[Review]:
+    ) -> list[ReviewResponse]:
         """Возвращает рецензии для кинопроизведения с сортировкой."""
         query = Review.find(Review.filmwork_id == filmwork_id)
 
@@ -113,11 +129,51 @@ class ReviewService:
         else:
             query = query.sort(-Review.created_at)  # type: ignore
 
-        return await query.skip(skip).limit(limit).to_list()
+        reviews = await query.skip(skip).limit(limit).to_list()
+
+        # Добавляем информацию о лайках для каждой рецензии
+        reviews_with_likes = []
+        for review in reviews:
+            like_summary = await ReviewLikeService.get_review_like_summary(
+                review.id,
+                user_id,
+            )
+            reviews_with_likes.append(
+                ReviewResponse(
+                    **review.dict(),
+                    likes_count=like_summary.likes_count,
+                    dislikes_count=like_summary.dislikes_count,
+                    user_vote=like_summary.user_vote,
+                ),
+            )
+
+        return reviews_with_likes
 
     @classmethod
-    async def get_user_reviews(cls, user_id: UUID) -> list[Review]:
+    async def get_user_reviews(
+        cls,
+        user_id: UUID,
+        current_user_id: Optional[UUID] = None,
+    ) -> list[ReviewResponse]:
         """Возвращает все рецензии пользователя."""
-        return await Review.find(
+        reviews = await Review.find(
             Review.user_id == user_id,
         ).sort(-Review.created_at).to_list()  # type: ignore
+
+        # Добавляем информацию о лайках для каждой рецензии
+        reviews_with_likes = []
+        for review in reviews:
+            like_summary = await ReviewLikeService.get_review_like_summary(
+                review.id,
+                current_user_id,
+            )
+            reviews_with_likes.append(
+                ReviewResponse(
+                    **review.dict(),
+                    likes_count=like_summary.likes_count,
+                    dislikes_count=like_summary.dislikes_count,
+                    user_vote=like_summary.user_vote,
+                ),
+            )
+
+        return reviews_with_likes

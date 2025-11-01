@@ -1,40 +1,10 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from beanie import Document
 from pydantic import BaseModel, ConfigDict, Field
-from pymongo import ASCENDING, DESCENDING, IndexModel
 
-
-class Review(Document):
-    """Рецензия на кинопроизведение."""
-    class Settings:
-        name = 'reviews'
-        indexes = [
-            IndexModel(
-                [('user_id', ASCENDING), ('filmwork_id', ASCENDING)],
-                unique=True,
-                name='unique_review_per_user',
-            ),
-            IndexModel([('user_id', ASCENDING)]),
-            IndexModel([('filmwork_id', ASCENDING)]),
-            IndexModel([('created_at', DESCENDING)]),
-            IndexModel([('rating', DESCENDING)]),
-        ]
-
-    id: UUID = Field(default_factory=uuid4)  # type: ignore
-    filmwork_id: UUID
-    user_id: UUID
-    text: str
-    author_name: str  # Имя автора рецензии
-    rating: Optional[int] = Field(None, ge=0, le=10)  # Оценка в рецензии (опционально)
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-    )
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-    )
+from schemas.review_like import ReviewLikeSummary
 
 
 class ReviewCreate(BaseModel):
@@ -63,5 +33,16 @@ class ReviewResponse(BaseModel):
     rating: Optional[int] = None
     created_at: datetime
     updated_at: datetime
+    # Добавляем информацию о лайках.
+    likes_count: int = 0
+    dislikes_count: int = 0
+    # Голос текущего пользователя.
+    user_vote: Optional[bool] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ReviewWithLikesResponse(BaseModel):
+    """Расширенная модель рецензии со статистикой лайков."""
+    review: ReviewResponse
+    like_summary: ReviewLikeSummary

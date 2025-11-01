@@ -5,8 +5,9 @@ from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 
-from api.v1 import bookmark, rating, review
+from api.v1 import bookmark, rating, review, review_like
 from core.config import settings
+from db.models import Review
 
 
 @contextlib.asynccontextmanager
@@ -19,7 +20,8 @@ async def lifespan(_: FastAPI):
         document_models=[
             bookmark.Bookmark,
             rating.Rating,
-            review.Review,
+            Review,
+            review_like.ReviewLike,
         ],
     )
     yield
@@ -56,6 +58,11 @@ def get_app() -> FastAPI:  # noqa CFQ004
         review.router,
         prefix='/api/v1/reviews',
         tags=['Review'],
+    )
+    app.include_router(
+        review_like.router,
+        prefix='/api/v1/review-likes',
+        tags=['Review Like'],
     )
 
     return app
