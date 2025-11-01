@@ -26,7 +26,7 @@ class Rating(Document):
     id: UUID = Field(default_factory=uuid4)  # type: ignore
     filmwork_id: UUID
     user_id: UUID
-    rating: int = Field(ge=0, le=10)  # Оценка от 0 до 10
+    rating: int = Field(ge=0, le=10)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
     )
@@ -42,10 +42,10 @@ class RatingCreate(BaseModel):
     rating: int = Field(ge=0, le=10)
 
     @validator('rating')
-    def validate_rating(cls, v):
-        if not 0 <= v <= 10:
+    def validate_rating(cls, value):
+        if not 0 <= value <= 10:
             raise ValueError('Рейтинг должен быть от 0 до 10')
-        return v
+        return value
 
 
 class RatingUpdate(BaseModel):
@@ -53,10 +53,10 @@ class RatingUpdate(BaseModel):
     rating: int = Field(ge=0, le=10)
 
     @validator('rating')
-    def validate_rating(cls, v):
-        if not 0 <= v <= 10:
+    def validate_rating(cls, value):
+        if not 0 <= value <= 10:
             raise ValueError('Рейтинг должен быть от 0 до 10')
-        return v
+        return value
 
 
 class RatingResponse(BaseModel):
@@ -75,7 +75,6 @@ class FilmworkRatingSummary(BaseModel):
     """Сводная информация по рейтингам кинопроизведения."""
     filmwork_id: UUID
     average_rating: Optional[float] = None
-    likes_count: int = 0  # Количество оценок 10
-    dislikes_count: int = 0  # Количество оценок 0
+    likes_count: int = 0
+    dislikes_count: int = 0
     ratings_count: int = 0
-    ratings_distribution: dict[int, int] = Field(default_factory=dict)
