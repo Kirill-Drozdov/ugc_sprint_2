@@ -30,6 +30,7 @@ class ReviewResponse(BaseModel):
     user_id: UUID
     text: str
     author_name: str
+    # TODO Оценку тут можно убрать.
     rating: Optional[int] = None
     created_at: datetime
     updated_at: datetime

@@ -50,10 +50,17 @@ async def create_or_update_review_like(
 )
 async def get_review_like_summary(
     review_id: UUID,
+    # TODO Получать через авторизацию JWT.
     user_id: UUID | None = None,
     logger: logging.Logger = Depends(logging.getLogger),
 ) -> ReviewLikeSummary:
-    """Получение статистики лайков рецензии."""
+    """Получение статистики лайков рецензии.
+
+    - **review_id**: идентификатор рецензии.
+    - **likes_count**: число лайков.
+    - **dislikes_count**: число дизлайков.
+    - **user_vote**: оценка пользователя.
+    """
     try:
         return await ReviewLikeService.get_review_like_summary(
             review_id,
@@ -76,7 +83,14 @@ async def delete_review_like(
     review_id: UUID,
     logger: logging.Logger = Depends(logging.getLogger),
 ) -> ReviewLike:
-    """Удаление лайка или дизлайка рецензии."""
+    """Удаление лайка или дизлайка рецензии.
+
+    - **id**: идентификатор лайка рецензии.
+    - **review_id**: идентификатор рецензии.
+    - **user_id**: идентификатор пользователя.
+    - **is_like**: лайк или не лайк.
+    - **created_at**: дата созданияы.
+    """
     try:
         review_like = await ReviewLikeService.delete_review_like(
             user_id,

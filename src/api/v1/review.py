@@ -49,10 +49,20 @@ async def create_review(
 async def update_review(
     review_id: UUID,
     review_data: ReviewUpdate,
+    # TODO Получать через авторизацию JWT.
     user_id: UUID | None = None,
     logger: logging.Logger = Depends(logging.getLogger),
 ) -> ReviewResponse:
-    """Обновление рецензии."""
+    """Обновление рецензии.
+
+    - **filmwork_id**: идентификатор кинопроизведения.
+    - **user_id**: идентификатор пользователя.
+    - **text**: текст рецензии.
+    - **author_name**: имя автора.
+    - **likes_count**: число лайков.
+    - **dislikes_count**: число дизлайков.
+    - **user_vote**: какую оценку дал пользователь.
+    """
     try:
         updated_review = await ReviewService.update_review(
             review_id,
@@ -75,10 +85,20 @@ async def update_review(
 )
 async def get_review(
     review_id: UUID,
+    # TODO Получать через авторизацию JWT.
     user_id: UUID | None = None,
     logger: logging.Logger = Depends(logging.getLogger),
 ) -> ReviewResponse:
-    """Получение рецензии по ID."""
+    """Получение рецензии по ID.
+
+    - **filmwork_id**: идентификатор кинопроизведения.
+    - **user_id**: идентификатор пользователя.
+    - **text**: текст рецензии.
+    - **author_name**: имя автора.
+    - **likes_count**: число лайков.
+    - **dislikes_count**: число дизлайков.
+    - **user_vote**: какую оценку дал пользователь.
+    """
     try:
         return await ReviewService.get_review(review_id, user_id)
     except HTTPException:
@@ -103,7 +123,16 @@ async def get_filmwork_reviews(
     sort_by: str = Query('created_at', regex='^(created_at|rating)$'),
     logger: logging.Logger = Depends(logging.getLogger),
 ) -> list[ReviewResponse]:
-    """Получение рецензий для кинопроизведения с сортировкой."""
+    """Получение рецензий для кинопроизведения с сортировкой.
+
+    - **filmwork_id**: идентификатор кинопроизведения.
+    - **user_id**: идентификатор пользователя.
+    - **text**: текст рецензии.
+    - **author_name**: имя автора.
+    - **likes_count**: число лайков.
+    - **dislikes_count**: число дизлайков.
+    - **user_vote**: какую оценку дал пользователь.
+    """
     try:
         return await ReviewService.get_filmwork_reviews(
             filmwork_id,
@@ -129,7 +158,16 @@ async def get_user_reviews(
     current_user_id: UUID | None = None,
     logger: logging.Logger = Depends(logging.getLogger),
 ) -> list[ReviewResponse]:
-    """Получение всех рецензий пользователя."""
+    """Получение всех рецензий пользователя.
+
+    - **filmwork_id**: идентификатор кинопроизведения.
+    - **user_id**: идентификатор пользователя.
+    - **text**: текст рецензии.
+    - **author_name**: имя автора.
+    - **likes_count**: число лайков.
+    - **dislikes_count**: число дизлайков.
+    - **user_vote**: какую оценку дал пользователь.
+    """
     try:
         return await ReviewService.get_user_reviews(user_id, current_user_id)
     except Exception as error:
@@ -146,10 +184,20 @@ async def get_user_reviews(
 )
 async def delete_review(
     review_id: UUID,
+    # TODO Получать через авторизацию JWT.
     user_id: UUID | None = None,
     logger: logging.Logger = Depends(logging.getLogger),
 ) -> ReviewResponse:
-    """Удаление рецензии."""
+    """Удаление рецензии.
+
+    - **filmwork_id**: идентификатор кинопроизведения.
+    - **user_id**: идентификатор пользователя.
+    - **text**: текст рецензии.
+    - **author_name**: имя автора.
+    - **likes_count**: число лайков.
+    - **dislikes_count**: число дизлайков.
+    - **user_vote**: какую оценку дал пользователь.
+    """
     try:
         review = await ReviewService.get_review(review_id, user_id)
         await ReviewService.delete_review(review_id)
