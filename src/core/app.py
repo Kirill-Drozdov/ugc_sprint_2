@@ -37,6 +37,7 @@ def get_app() -> FastAPI:  # noqa CFQ004
 
     app = FastAPI(
         title=settings.project_name,
+        root_path='/api/ugc',
         docs_url='/openapi',
         openapi_url='/openapi.json',
         default_response_class=ORJSONResponse,
