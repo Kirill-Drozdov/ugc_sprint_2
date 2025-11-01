@@ -1,6 +1,6 @@
 from http import HTTPStatus
-from uuid import UUID
 import logging
+from uuid import UUID
 
 from fastapi import APIRouter, Depends
 
