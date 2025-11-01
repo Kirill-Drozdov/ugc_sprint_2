@@ -4,7 +4,8 @@ from uuid import UUID
 
 from fastapi import HTTPException
 
-from schemas.bookmark import Bookmark, BookmarkCreate
+from db.models import Bookmark
+from schemas.bookmark import BookmarkCreate
 
 
 class BookmarkService:

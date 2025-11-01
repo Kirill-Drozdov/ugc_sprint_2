@@ -7,7 +7,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 from api.v1 import bookmark, rating, review, review_like
 from core.config import settings
-from db.models import Review
+from db import models
 
 
 @contextlib.asynccontextmanager
@@ -18,10 +18,10 @@ async def lifespan(_: FastAPI):
     await init_beanie(
         database=client.ugc,  # type: ignore
         document_models=[
-            bookmark.Bookmark,
-            rating.Rating,
-            Review,
-            review_like.ReviewLike,
+            models.Bookmark,
+            models.Rating,
+            models.Review,
+            models.ReviewLike,
         ],
     )
     yield

@@ -4,9 +4,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from db.models import Rating
 from schemas.rating import (
     FilmworkRatingSummary,
-    Rating,
     RatingCreate,
     RatingResponse,
     RatingUpdate,

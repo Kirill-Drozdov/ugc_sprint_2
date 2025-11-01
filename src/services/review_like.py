@@ -5,8 +5,8 @@ from uuid import UUID
 
 from fastapi import HTTPException
 
-from db.models import Review
-from schemas.review_like import ReviewLike, ReviewLikeCreate, ReviewLikeSummary
+from db.models import Review, ReviewLike
+from schemas.review_like import ReviewLikeCreate, ReviewLikeSummary
 
 
 class ReviewLikeService:

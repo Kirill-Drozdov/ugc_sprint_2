@@ -6,9 +6,9 @@ from uuid import UUID
 
 from fastapi import HTTPException
 
+from db.models import Rating
 from schemas.rating import (
     FilmworkRatingSummary,
-    Rating,
     RatingCreate,
     RatingUpdate,
 )

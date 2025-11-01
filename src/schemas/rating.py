@@ -1,38 +1,8 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from beanie import Document
 from pydantic import BaseModel, ConfigDict, Field, validator
-from pymongo import ASCENDING, IndexModel
-
-
-class Rating(Document):
-    """Оценка кинопроизведения."""
-    class Settings:
-        name = 'ratings'
-        indexes = [
-            IndexModel(
-                [('user_id', ASCENDING), ('filmwork_id', ASCENDING)],
-                unique=True,
-                name='unique_rating_per_user',
-            ),
-            IndexModel([('user_id', ASCENDING)]),
-            IndexModel([('filmwork_id', ASCENDING)]),
-            IndexModel([('rating', ASCENDING)]),
-            IndexModel([('created_at', ASCENDING)]),
-        ]
-
-    id: UUID = Field(default_factory=uuid4)  # type: ignore
-    filmwork_id: UUID
-    user_id: UUID
-    rating: int = Field(ge=0, le=10)
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-    )
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-    )
 
 
 class RatingCreate(BaseModel):

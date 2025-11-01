@@ -4,7 +4,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 
-from schemas.bookmark import Bookmark, BookmarkCreate, BookmarkResponse
+from db.models import Bookmark
+from schemas.bookmark import BookmarkCreate, BookmarkResponse
 from services.bookmark import BookmarkService
 
 router = APIRouter()

@@ -4,8 +4,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from db.models import ReviewLike
 from schemas.review_like import (
-    ReviewLike,
     ReviewLikeCreate,
     ReviewLikeResponse,
     ReviewLikeSummary,
