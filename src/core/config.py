@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     app_port: int = 8000
     project_name: str = 'UGC API 2'
     app_version: str = 'v0.0.1'
+    # Подключение к MongoDB.
+    mongo_host: str = 'localhost'
+    mongo_port: int = 27019
 
     model_config = SettingsConfigDict(
         env_file='.env',

@@ -1,21 +1,22 @@
 import contextlib
 
+from beanie import init_beanie
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
-
-from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
 
-from api.v1 import post
+from api.v1 import bookmark
 from core.config import settings
 
 
 @contextlib.asynccontextmanager
 async def lifespan(_: FastAPI):
-    client = AsyncIOMotorClient('localhost:27019')
+    client = AsyncIOMotorClient(
+        f'{settings.mongo_host}:{settings.mongo_port}',
+    )
     await init_beanie(
         database=client.ugc,  # type: ignore
-        document_models=[post.Post],
+        document_models=[bookmark.Bookmark],
     )
     yield
     client.close()
@@ -37,7 +38,11 @@ def get_app() -> FastAPI:  # noqa CFQ004
     )
 
     # Подключение роутеров.
-    app.include_router(post.router, prefix='/api/v1/posts', tags=['Post'])
+    app.include_router(
+        bookmark.router,
+        prefix='/api/v1/bookmarks',
+        tags=['Bookmark'],
+    )
 
     return app
 
