@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 
-from api.v1 import bookmark
+from api.v1 import bookmark, rating, review
 from core.config import settings
 
 
@@ -16,7 +16,11 @@ async def lifespan(_: FastAPI):
     )
     await init_beanie(
         database=client.ugc,  # type: ignore
-        document_models=[bookmark.Bookmark],
+        document_models=[
+            bookmark.Bookmark,
+            rating.Rating,
+            review.Review,
+        ],
     )
     yield
     client.close()
@@ -42,6 +46,16 @@ def get_app() -> FastAPI:  # noqa CFQ004
         bookmark.router,
         prefix='/api/v1/bookmarks',
         tags=['Bookmark'],
+    )
+    app.include_router(
+        rating.router,
+        prefix='/api/v1/ratings',
+        tags=['Rating'],
+    )
+    app.include_router(
+        review.router,
+        prefix='/api/v1/reviews',
+        tags=['Review'],
     )
 
     return app
