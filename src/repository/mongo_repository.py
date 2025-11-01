@@ -1,4 +1,4 @@
-from typing import Any, Generic, Sequence, Type, TypeVar
+from typing import Any, Generic, Type, TypeVar
 
 from beanie import Document
 
@@ -22,7 +22,7 @@ class MongoRepository(
         pass
 
     async def get_one(self, obj_id: Any) -> ModelType | None:
-        return await self._model.find_one(self._model.id=obj_id)
+        return await self._model.find_one(self._model.id == obj_id)
 
     async def get_multi(self, *, skip=0, limit=100):
         pass
