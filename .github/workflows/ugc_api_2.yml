@@ -33,7 +33,7 @@ jobs:
     - name: Mypy typechecking
       run: |
         mypy src/
-  notify:
+  telegram_notify:
     runs-on: ubuntu-latest
     needs: build
     if: always()
