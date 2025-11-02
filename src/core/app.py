@@ -12,7 +12,7 @@ from db import models
 
 @contextlib.asynccontextmanager
 async def lifespan(_: FastAPI):
-    client = AsyncIOMotorClient(
+    client: AsyncIOMotorClient = AsyncIOMotorClient(
         f'{settings.mongo_host}:{settings.mongo_port}',
     )
     await init_beanie(
