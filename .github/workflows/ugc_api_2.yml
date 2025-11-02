@@ -33,3 +33,20 @@ jobs:
     - name: Mypy typechecking
       run: |
         mypy src/
+  notify:
+    runs-on: ubuntu-latest
+    needs: build
+    if: always()
+    steps:
+    - name: Send Telegram notification
+      uses: appleboy/telegram-action@v0.3.1
+      with:
+        to: ${{ secrets.TELEGRAM_CHAT_ID }}
+        token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        message: |
+          ${{ github.workflow }} - ${{ job.status }}!
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref }}
+          Commit: ${{ github.sha }}
+          By: ${{ github.actor }}
+          View run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
