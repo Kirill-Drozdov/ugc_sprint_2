@@ -9,7 +9,9 @@ from core.logger import LOGGING
 logging_config.dictConfig(LOGGING)
 
 # Корень проекта.
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__)),
+)
 
 
 class Settings(BaseSettings):

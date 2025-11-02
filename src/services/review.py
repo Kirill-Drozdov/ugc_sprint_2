@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 from http import HTTPStatus
 import logging
@@ -131,49 +132,46 @@ class ReviewService:
 
         reviews = await query.skip(skip).limit(limit).to_list()
 
-        # Добавляем информацию о лайках для каждой рецензии
-        reviews_with_likes = []
-        for review in reviews:
-            like_summary = await ReviewLikeService.get_review_like_summary(
-                review.id,
-                user_id,
-            )
-            reviews_with_likes.append(
-                ReviewResponse(
-                    **review.dict(),
-                    likes_count=like_summary.likes_count,
-                    dislikes_count=like_summary.dislikes_count,
-                    user_vote=like_summary.user_vote,
-                ),
-            )
+        tasks = [
+            ReviewLikeService.get_review_like_summary(review.id, user_id)
+            for review in reviews
+        ]
 
-        return reviews_with_likes
+        like_summaries = await asyncio.gather(*tasks)
+
+        return [
+            ReviewResponse(
+                **review.dict(),
+                likes_count=summary.likes_count,
+                dislikes_count=summary.dislikes_count,
+                user_vote=summary.user_vote,
+            )
+            for review, summary in zip(reviews, like_summaries)
+        ]
 
     @classmethod
     async def get_user_reviews(
         cls,
         user_id: UUID,
-        current_user_id: Optional[UUID] = None,
     ) -> list[ReviewResponse]:
         """Возвращает все рецензии пользователя."""
         reviews = await Review.find(
             Review.user_id == user_id,
         ).sort(-Review.created_at).to_list()  # type: ignore
 
-        # Добавляем информацию о лайках для каждой рецензии
-        reviews_with_likes = []
-        for review in reviews:
-            like_summary = await ReviewLikeService.get_review_like_summary(
-                review.id,
-                current_user_id,
-            )
-            reviews_with_likes.append(
-                ReviewResponse(
-                    **review.dict(),
-                    likes_count=like_summary.likes_count,
-                    dislikes_count=like_summary.dislikes_count,
-                    user_vote=like_summary.user_vote,
-                ),
-            )
+        tasks = [
+            ReviewLikeService.get_review_like_summary(review.id, user_id)
+            for review in reviews
+        ]
 
-        return reviews_with_likes
+        like_summaries = await asyncio.gather(*tasks)
+
+        return [
+            ReviewResponse(
+                **review.dict(),
+                likes_count=summary.likes_count,
+                dislikes_count=summary.dislikes_count,
+                user_vote=summary.user_vote,
+            )
+            for review, summary in zip(reviews, like_summaries)
+        ]

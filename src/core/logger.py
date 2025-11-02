@@ -1,7 +1,7 @@
 """Модель с конфигурицией логгера."""
 
 LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-LOG_DEFAULT_HANDLERS = ['console', ]
+LOG_DEFAULT_HANDLERS = ['console']
 
 LOGGING = {
     'version': 1,
@@ -17,7 +17,7 @@ LOGGING = {
         },
         'access': {
             '()': 'uvicorn.logging.AccessFormatter',
-            'fmt': "%(levelprefix)s %(client_addr)s - '%(request_line)s' %(status_code)s",
+            'fmt': "%(levelprefix)s %(client_addr)s - '%(request_line)s' %(status_code)s",  # noqa
         },
     },
     'handlers': {

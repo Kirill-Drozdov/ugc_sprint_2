@@ -12,10 +12,10 @@ class RatingCreate(BaseModel):
     rating: int = Field(ge=0, le=10)
 
     @validator('rating')
-    def validate_rating(cls, value):
-        if not 0 <= value <= 10:
+    def validate_rating(cls, rating):
+        if not 0 <= rating <= 10:
             raise ValueError('Рейтинг должен быть от 0 до 10')
-        return value
+        return rating
 
 
 class RatingUpdate(BaseModel):
@@ -23,10 +23,10 @@ class RatingUpdate(BaseModel):
     rating: int = Field(ge=0, le=10)
 
     @validator('rating')
-    def validate_rating(cls, value):
-        if not 0 <= value <= 10:
+    def validate_rating(cls, rating):
+        if not 0 <= rating <= 10:
             raise ValueError('Рейтинг должен быть от 0 до 10')
-        return value
+        return rating
 
 
 class RatingResponse(BaseModel):

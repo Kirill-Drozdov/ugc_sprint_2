@@ -111,13 +111,15 @@ class RatingService:
             return FilmworkRatingSummary(filmwork_id=filmwork_id)
 
         total_ratings = len(ratings)
-        total_score = sum(r.rating for r in ratings)
+        total_score = sum(rating.rating for rating in ratings)
         average_rating = round(total_score / total_ratings, 2)
 
         # Распределение оценок.
         distribution = {}
-        for i in range(11):
-            distribution[i] = sum(1 for r in ratings if r.rating == i)
+        for indx in range(11):
+            distribution[indx] = sum(
+                1 for rating in ratings if rating.rating == indx
+            )
 
         return FilmworkRatingSummary(
             filmwork_id=filmwork_id,

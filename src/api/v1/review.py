@@ -155,7 +155,6 @@ async def get_filmwork_reviews(
 )
 async def get_user_reviews(
     user_id: UUID,
-    current_user_id: UUID | None = None,
     logger: logging.Logger = Depends(logging.getLogger),
 ) -> list[ReviewResponse]:
     """Получение всех рецензий пользователя.
@@ -169,7 +168,7 @@ async def get_user_reviews(
     - **user_vote**: какую оценку дал пользователь.
     """
     try:
-        return await ReviewService.get_user_reviews(user_id, current_user_id)
+        return await ReviewService.get_user_reviews(user_id)
     except Exception as error:
         logger.error(f'Ошибка при получении рецензий пользователя: {error}')
         raise
