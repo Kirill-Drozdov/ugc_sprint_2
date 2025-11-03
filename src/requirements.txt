@@ -4,3 +4,4 @@ gunicorn==23.0.0
 pymongo==4.15.3
 beanie==2.0.0
 motor==3.7.1
+sentry-sdk[fastapi]>=1.0.0
