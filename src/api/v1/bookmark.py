@@ -2,7 +2,7 @@ from http import HTTPStatus
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from db.models import Bookmark
 from schemas.bookmark import BookmarkCreate, BookmarkResponse
@@ -29,6 +29,8 @@ async def create_new_bookmark(
     """
     try:
         return await BookmarkService.create_bookmark(bookmark)
+    except HTTPException:
+        raise
     except Exception as error:
         logger.error(
             f'Ошибка при создании закладки: {error}',
@@ -83,6 +85,8 @@ async def delete_bookmark(
     """
     try:
         return await BookmarkService.delete_bookmark(bookmark_id)
+    except HTTPException:
+        raise
     except Exception as error:
         logger.error(
             f'Ошибка при удалении закладки: {error}',

@@ -146,7 +146,7 @@ services:
       - mongos1
       - mongos2
     volumes:
-      - ./scripts/init-cluster.sh:/scripts/init-cluster.sh
+      - ./deploy/scripts/init-cluster.sh:/scripts/init-cluster.sh
     working_dir: /scripts
     entrypoint: ["/bin/bash", "-c"]
     command: |
@@ -157,12 +157,9 @@ services:
   ugc_api:
     build:
       context: ./src/.
-    # ports:
-    #   - "8000:8000"
     depends_on:
-      - mongo_init
-      - mongos1
-      - mongos2
+      mongo_init:
+        condition: service_completed_successfully
     env_file:
       - ./src/.env
   nginx:
@@ -170,7 +167,87 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx/site.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/site.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    logging:
+      driver: gelf
+      options:
+        gelf-address: udp://127.0.0.1:5044
+        tag: nginx 
     depends_on:
       - ugc_api
+
+  sentry-api:
+    image: sentry:latest
+    env_file:
+      - ./deploy/sentry/.env
+    depends_on:
+      - db-sentry
+      - redis
+    ports:
+      # Доступ к веб-интерфейсу Sentry.
+      - "9000:9000"
+
+  sentry-worker:
+    image: sentry:latest
+    env_file:
+      - ./deploy/sentry/.env
+    depends_on:
+      - db-sentry
+      - redis
+    command: sentry run worker
+
+  sentry-cron:
+    image: sentry:latest
+    env_file:
+      - ./deploy/sentry/.env
+    depends_on:
+      - db-sentry
+      - redis
+    command: sentry run cron
+
+  db-sentry:
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER=sentry
+      - POSTGRES_PASSWORD=sentry
+      - POSTGRES_DB=sentry
+
+  redis:
+    image: redis:latest
+    restart: always
+
+  logstash:
+    image: logstash:8.10.2
+    depends_on:
+      - elasticsearch
+    environment:
+      XPACK_MONITORING_ENABLED: "false"
+      ES_HOST: "elasticsearch:9200"
+    ports:
+      - "5044:5044/udp"
+    volumes:
+      - ./deploy/log/logstash.conf:/config/logstash.conf:ro
+    command: logstash -f /config/logstash.conf
+
+  elasticsearch:
+    image: elasticsearch:8.10.2
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - 9200:9200
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+
+  kibana:
+    image: kibana:8.10.2
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+
+volumes:
+  esdata:

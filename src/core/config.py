@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     # Подключение к MongoDB.
     mongo_host: str = 'localhost'
     mongo_port: int = 27019
+    # Подключение к Sentry.
+    sentry_dsn: str = ''
+    # Подключение к logstash.
+    logstash_host: str = 'localhost'
+    logstash_port: int = 5044
 
     model_config = SettingsConfigDict(
         env_file='.env',

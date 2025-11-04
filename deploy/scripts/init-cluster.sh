@@ -152,36 +152,6 @@ add_shards_to_cluster() {
     echo "✅ Шарды добавлены в кластер"
 }
 
-# Включение шардирования для базы данных ugc
-enable_sharding_for_ugc() {
-    echo "🗄️ Включение шардирования для базы данных ugc..."
-    
-    mongosh --host mongos1 --port 27017 --eval "
-        // Включение шардирования для базы данных ugc
-        sh.enableSharding('ugc')
-        
-        // Создание индексов для коллекций
-        db = db.getSiblingDB('ugc')
-        
-        // Для закладок - шардирование по user_id
-        db.bookmarks.createIndex({ user_id: 1 })
-        sh.shardCollection('ugc.bookmarks', { user_id: 1 })
-        
-        // Для оценок - шардирование по filmwork_id  
-        db.ratings.createIndex({ filmwork_id: 1 })
-        sh.shardCollection('ugc.ratings', { filmwork_id: 1 })
-        
-        // Для рецензий - шардирование по filmwork_id
-        db.reviews.createIndex({ filmwork_id: 1 })
-        sh.shardCollection('ugc.reviews', { filmwork_id: 1 })
-        
-        // Для лайков рецензий - шардирование по review_id
-        db.review_likes.createIndex({ review_id: 1 })
-        sh.shardCollection('ugc.review_likes', { review_id: 1 })
-    "
-    
-    echo "✅ Шардирование для ugc настроено"
-}
 
 # Проверка статуса кластера
 check_cluster_status() {
@@ -200,24 +170,21 @@ main() {
     
     # Последовательная инициализация
     init_config_servers
-    sleep 5
+    sleep 1
     
     init_shard1  
-    sleep 5
+    sleep 1
     
     init_shard2
-    sleep 5
+    sleep 1
     
     add_shards_to_cluster
-    sleep 3
-    
-    enable_sharding_for_ugc
-    sleep 2
+    sleep 1
     
     check_cluster_status
     
     echo ""
-    echo "📍 Точки подключения:"
+    echo "📍 Точки подключения с хоста:"
     echo "   - Mongos 1: localhost:27019"
     echo "   - Mongos 2: localhost:27020"
 }

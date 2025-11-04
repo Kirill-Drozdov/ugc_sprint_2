@@ -12,11 +12,6 @@ class ReviewLike(Document):
     class Settings:
         name = 'review_likes'
         indexes = [
-            IndexModel(
-                [('user_id', ASCENDING), ('review_id', ASCENDING)],
-                unique=True,
-                name='unique_like_per_user_review',
-            ),
             IndexModel([('user_id', ASCENDING)]),
             IndexModel([('review_id', ASCENDING)]),
             IndexModel([('is_like', ASCENDING)]),
@@ -38,11 +33,6 @@ class Review(Document):
     class Settings:
         name = 'reviews'
         indexes = [
-            IndexModel(
-                [('user_id', ASCENDING), ('filmwork_id', ASCENDING)],
-                unique=True,
-                name='unique_review_per_user',
-            ),
             IndexModel([('user_id', ASCENDING)]),
             IndexModel([('filmwork_id', ASCENDING)]),
             IndexModel([('created_at', DESCENDING)]),
@@ -69,11 +59,6 @@ class Rating(Document):
     class Settings:
         name = 'ratings'
         indexes = [
-            IndexModel(
-                [('user_id', ASCENDING), ('filmwork_id', ASCENDING)],
-                unique=True,
-                name='unique_rating_per_user',
-            ),
             IndexModel([('user_id', ASCENDING)]),
             IndexModel([('filmwork_id', ASCENDING)]),
             IndexModel([('rating', ASCENDING)]),
@@ -97,13 +82,6 @@ class Bookmark(Document):
     class Settings:
         name = 'bookmarks'
         indexes = [
-            # Уникальный составной индекс - предотвращает
-            # дубликаты на уровне БД.
-            IndexModel(
-                [('user_id', ASCENDING), ('filmwork_id', ASCENDING)],
-                unique=True,
-                name='unique_bookmark_per_user',
-            ),
             # Отдельные индексы для производительности
             IndexModel([('user_id', ASCENDING)]),
             IndexModel([('filmwork_id', ASCENDING)]),
