@@ -6,7 +6,7 @@ from beanie import init_beanie
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import ORJSONResponse
-import logstash
+from logstash import LogstashHandler  # type: ignore
 from motor.motor_asyncio import AsyncIOMotorClient
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
@@ -68,7 +68,7 @@ def get_app() -> FastAPI:  # noqa CFQ004
     )
 
     logging.getLogger('').addHandler(
-        logstash.LogstashHandler(
+        LogstashHandler(
             settings.logstash_host,
             settings.logstash_port,
             version=1,
