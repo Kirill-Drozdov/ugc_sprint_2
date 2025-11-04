@@ -1,10 +1,12 @@
 import contextlib
 from http import HTTPStatus
+import logging
 
 from beanie import init_beanie
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import ORJSONResponse
+import logstash
 from motor.motor_asyncio import AsyncIOMotorClient
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
@@ -64,6 +66,15 @@ def get_app() -> FastAPI:  # noqa CFQ004
         default_response_class=ORJSONResponse,
         lifespan=lifespan,  # type: ignore
     )
+
+    logging.getLogger('').addHandler(
+        logstash.LogstashHandler(
+            settings.logstash_host,
+            settings.logstash_port,
+            version=1,
+        ),
+    )
+    logging.getLogger('').setLevel(logging.INFO)
 
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):  # noqa
