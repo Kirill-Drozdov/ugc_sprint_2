@@ -169,6 +169,11 @@ services:
     volumes:
       - ./nginx/site.conf:/etc/nginx/conf.d/default.conf:ro
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    logging:
+      driver: gelf
+      options:
+        gelf-address: udp://127.0.0.1:5044
+        tag: nginx 
     depends_on:
       - ugc_api
 

@@ -72,6 +72,7 @@ def get_app() -> FastAPI:  # noqa CFQ004
             settings.logstash_host,
             settings.logstash_port,
             version=1,
+            tags=['ugc_api'],
         ),
     )
     logging.getLogger('').setLevel(logging.INFO)
