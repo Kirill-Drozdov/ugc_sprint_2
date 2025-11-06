@@ -68,19 +68,21 @@ class ReviewService:
     @classmethod
     async def delete_review(
         cls,
+        user_id: UUID,
         review_id: UUID,
-    ) -> Review:
+    ) -> ReviewResponse:
         """Удаляет рецензию."""
-        review = await Review.get(review_id)
+        review = await cls.get_review(review_id, user_id)
+        review_to_remove = await Review.get(review_id)
 
-        if review is None:
+        if review_to_remove is None:
             raise HTTPException(
                 status_code=HTTPStatus.NOT_FOUND,
                 detail='Рецензия не найдена',
             )
 
-        await review.delete()
-        return review
+        await review_to_remove.delete()
+        return review  # noqa
 
     @classmethod
     async def get_review(

@@ -1,8 +1,7 @@
 from http import HTTPStatus
-import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter
 
 from db.models import Bookmark
 from schemas.bookmark import BookmarkCreate, BookmarkResponse
@@ -20,22 +19,13 @@ router = APIRouter()
 )
 async def create_new_bookmark(
     bookmark: BookmarkCreate,
-    logger: logging.Logger = Depends(logging.getLogger),
 ) -> Bookmark:
     """Создание закладки.
 
     - **filmwork_id**: идентификатор кинопроизведения.
     - **user_id**: идентификатор пользователя.
     """
-    try:
-        return await BookmarkService.create_bookmark(bookmark)
-    except HTTPException:
-        raise
-    except Exception as error:
-        logger.error(
-            f'Ошибка при создании закладки: {error}',
-        )
-        raise
+    return await BookmarkService.create_bookmark(bookmark)
 
 
 @router.get(
@@ -47,7 +37,6 @@ async def create_new_bookmark(
 )
 async def get_user_bookmarks(
     user_id: UUID,
-    logger: logging.Logger = Depends(logging.getLogger),
 ) -> list[Bookmark]:
     """Просмотр закладок пользователя.
 
@@ -56,13 +45,7 @@ async def get_user_bookmarks(
     - **user_id**: идентификатор пользователя.
     - **created_at**: время создания закладки.
     """
-    try:
-        return await BookmarkService.get_user_bookmarks(user_id)
-    except Exception as error:
-        logger.error(
-            f'Ошибка при просмотре закладок пользователя: {error}',
-        )
-        raise
+    return await BookmarkService.get_user_bookmarks(user_id)
 
 
 @router.delete(
@@ -74,7 +57,6 @@ async def get_user_bookmarks(
 )
 async def delete_bookmark(
     bookmark_id: UUID,
-    logger: logging.Logger = Depends(logging.getLogger),
 ) -> Bookmark:
     """Удаление закладки пользователя.
 
@@ -83,12 +65,4 @@ async def delete_bookmark(
     - **user_id**: идентификатор пользователя.
     - **created_at**: время создания закладки.
     """
-    try:
-        return await BookmarkService.delete_bookmark(bookmark_id)
-    except HTTPException:
-        raise
-    except Exception as error:
-        logger.error(
-            f'Ошибка при удалении закладки: {error}',
-        )
-        raise
+    return await BookmarkService.delete_bookmark(bookmark_id)

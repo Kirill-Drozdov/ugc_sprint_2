@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 from http import HTTPStatus
 import logging
-from typing import Optional
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -72,28 +71,30 @@ class RatingService:
         cls,
         user_id: UUID,
         filmwork_id: UUID,
-    ) -> Optional[Rating]:
+    ) -> Rating:
         """Возвращает оценку пользователя для кинопроизведения."""
-        return await Rating.find_one(
+        rating = await Rating.find_one(
             Rating.user_id == user_id,
             Rating.filmwork_id == filmwork_id,
         )
+        if rating is None:
+            raise HTTPException(
+                status_code=HTTPStatus.NOT_FOUND,
+                detail='Оценка не найдена',
+            )
+        return rating
 
     @classmethod
     async def delete_rating(
         cls,
         user_id: UUID,
         filmwork_id: UUID,
-    ) -> Optional[Rating]:
+    ) -> Rating:
         """Удаляет оценку пользователя."""
-        rating = await Rating.find_one(
-            Rating.user_id == user_id,
-            Rating.filmwork_id == filmwork_id,
+        rating = await cls.get_user_rating(
+            user_id=user_id,
+            filmwork_id=filmwork_id,
         )
-
-        if rating is None:
-            return None
-
         await rating.delete()
         return rating
 

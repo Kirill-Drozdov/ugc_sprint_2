@@ -1,8 +1,7 @@
 from http import HTTPStatus
-import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter
 
 from db.models import ReviewLike
 from schemas.review_like import (
@@ -24,7 +23,6 @@ router = APIRouter()
 )
 async def create_or_update_review_like(
     like_data: ReviewLikeCreate,
-    logger: logging.Logger = Depends(logging.getLogger),
 ) -> ReviewLike:
     """Добавление лайка или дизлайка рецензии.
 
@@ -32,13 +30,7 @@ async def create_or_update_review_like(
     - **user_id**: идентификатор пользователя.
     - **is_like**: True - лайк, False - дизлайк.
     """
-    try:
-        return await ReviewLikeService.create_or_update_review_like(like_data)
-    except HTTPException:
-        raise
-    except Exception as error:
-        logger.error(f'Ошибка при добавлении лайка/дизлайка: {error}')
-        raise
+    return await ReviewLikeService.create_or_update_review_like(like_data)
 
 
 @router.get(
@@ -52,7 +44,6 @@ async def get_review_like_summary(
     review_id: UUID,
     # TODO Получать через авторизацию JWT.
     user_id: UUID | None = None,
-    logger: logging.Logger = Depends(logging.getLogger),
 ) -> ReviewLikeSummary:
     """Получение статистики лайков рецензии.
 
@@ -61,14 +52,10 @@ async def get_review_like_summary(
     - **dislikes_count**: число дизлайков.
     - **user_vote**: оценка пользователя.
     """
-    try:
-        return await ReviewLikeService.get_review_like_summary(
-            review_id,
-            user_id,
-        )
-    except Exception as error:
-        logger.error(f'Ошибка при получении статистики лайков: {error}')
-        raise
+    return await ReviewLikeService.get_review_like_summary(
+        review_id,
+        user_id,
+    )
 
 
 @router.delete(
@@ -81,7 +68,6 @@ async def get_review_like_summary(
 async def delete_review_like(
     user_id: UUID,
     review_id: UUID,
-    logger: logging.Logger = Depends(logging.getLogger),
 ) -> ReviewLike:
     """Удаление лайка или дизлайка рецензии.
 
@@ -91,19 +77,7 @@ async def delete_review_like(
     - **is_like**: лайк или не лайк.
     - **created_at**: дата созданияы.
     """
-    try:
-        review_like = await ReviewLikeService.delete_review_like(
-            user_id,
-            review_id,
-        )
-        if review_like is None:
-            raise HTTPException(
-                status_code=HTTPStatus.NOT_FOUND,
-                detail='Лайк/дизлайк не найден',
-            )
-        return review_like
-    except HTTPException:
-        raise
-    except Exception as error:
-        logger.error(f'Ошибка при удалении лайка/дизлайка: {error}')
-        raise
+    return await ReviewLikeService.delete_review_like(
+        user_id,
+        review_id,
+    )

@@ -1,8 +1,7 @@
 from http import HTTPStatus
-import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter
 
 from db.models import Rating
 from schemas.rating import (
@@ -25,7 +24,6 @@ router = APIRouter()
 )
 async def create_rating(
     rating: RatingCreate,
-    logger: logging.Logger = Depends(logging.getLogger),
 ) -> Rating:
     """Создание новой оценки кинопроизведения.
 
@@ -33,13 +31,7 @@ async def create_rating(
     - **user_id**: идентификатор пользователя.
     - **rating**: оценка от 0 до 10.
     """
-    try:
-        return await RatingService.create_rating(rating)
-    except HTTPException:
-        raise
-    except Exception as error:
-        logger.error(f'Ошибка при создании оценки: {error}')
-        raise
+    return await RatingService.create_rating(rating)
 
 
 @router.put(
@@ -53,23 +45,16 @@ async def update_rating(
     user_id: UUID,
     rating_id: UUID,
     rating_data: RatingUpdate,
-    logger: logging.Logger = Depends(logging.getLogger),
 ) -> Rating:
     """Обновление существующей оценки.
 
     - **rating**: новая оценка от 0 до 10.
     """
-    try:
-        return await RatingService.update_rating(
-            user_id,
-            rating_id,
-            rating_data,
-        )
-    except HTTPException:
-        raise
-    except Exception as error:
-        logger.error(f'Ошибка при обновлении оценки: {error}')
-        raise
+    return await RatingService.update_rating(
+        user_id,
+        rating_id,
+        rating_data,
+    )
 
 
 @router.get(
@@ -82,7 +67,6 @@ async def update_rating(
 async def get_user_filmwork_rating(
     user_id: UUID,
     filmwork_id: UUID,
-    logger: logging.Logger = Depends(logging.getLogger),
 ) -> Rating:
     """Получение оценки пользователя для кинопроизведения.
 
@@ -91,19 +75,7 @@ async def get_user_filmwork_rating(
     - **user_id**: идентификатор пользователя.
     - **rating**: оценка от 0 до 10.
     """
-    try:
-        rating = await RatingService.get_user_rating(user_id, filmwork_id)
-        if rating is None:
-            raise HTTPException(
-                status_code=HTTPStatus.NOT_FOUND,
-                detail='Оценка не найдена',
-            )
-        return rating
-    except HTTPException:
-        raise
-    except Exception as error:
-        logger.error(f'Ошибка при получении оценки: {error}')
-        raise
+    return await RatingService.get_user_rating(user_id, filmwork_id)
 
 
 @router.get(
@@ -115,7 +87,6 @@ async def get_user_filmwork_rating(
 )
 async def get_filmwork_rating_summary(
     filmwork_id: UUID,
-    logger: logging.Logger = Depends(logging.getLogger),
 ) -> FilmworkRatingSummary:
     """Получение сводной информации по рейтингам кинопроизведения.
 
@@ -125,11 +96,7 @@ async def get_filmwork_rating_summary(
     - **dislikes_count**: число дизлайков.
     - **ratings_count**: суммарное число оценок.
     """
-    try:
-        return await RatingService.get_filmwork_rating_summary(filmwork_id)
-    except Exception as error:
-        logger.error(f'Ошибка при получении сводной информации: {error}')
-        raise
+    return await RatingService.get_filmwork_rating_summary(filmwork_id)
 
 
 @router.get(
@@ -141,7 +108,6 @@ async def get_filmwork_rating_summary(
 )
 async def get_user_ratings(
     user_id: UUID,
-    logger: logging.Logger = Depends(logging.getLogger),
 ) -> list[Rating]:
     """Получение всех оценок пользователя.
     - **id**: идентификатор оценки.
@@ -149,11 +115,7 @@ async def get_user_ratings(
     - **user_id**: идентификатор пользователя.
     - **rating**: оценка от 0 до 10.
     """
-    try:
-        return await RatingService.get_user_ratings(user_id)
-    except Exception as error:
-        logger.error(f'Ошибка при получении оценок пользователя: {error}')
-        raise
+    return await RatingService.get_user_ratings(user_id)
 
 
 @router.delete(
@@ -166,7 +128,6 @@ async def get_user_ratings(
 async def delete_rating(
     user_id: UUID,
     filmwork_id: UUID,
-    logger: logging.Logger = Depends(logging.getLogger),
 ) -> Rating:
     """Удаление оценки пользователя для кинопроизведения.
     - **id**: идентификатор оценки.
@@ -174,16 +135,4 @@ async def delete_rating(
     - **user_id**: идентификатор пользователя.
     - **rating**: оценка от 0 до 10.
     """
-    try:
-        rating = await RatingService.delete_rating(user_id, filmwork_id)
-        if rating is None:
-            raise HTTPException(
-                status_code=HTTPStatus.NOT_FOUND,
-                detail='Оценка не найдена',
-            )
-        return rating
-    except HTTPException:
-        raise
-    except Exception as error:
-        logger.error(f'Ошибка при удалении оценки: {error}')
-        raise
+    return await RatingService.delete_rating(user_id, filmwork_id)

@@ -4,7 +4,6 @@ import logging
 
 from beanie import init_beanie
 from fastapi import FastAPI, Request
-from fastapi.exceptions import RequestValidationError
 from fastapi.responses import ORJSONResponse
 from logstash import LogstashHandler  # type: ignore
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -80,22 +79,15 @@ def get_app() -> FastAPI:  # noqa CFQ004
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):  # noqa
         """Глобальный обработчик исключений."""
+        logger = logging.getLogger('exception_on_request')
+
+        logger.error(
+            f'Ошибка при запросе {request.method} {request.url}: {str(exc)}',
+        )
         sentry_sdk.capture_exception(exc)
         return ORJSONResponse(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-            content={'detail': 'Internal server error'},
-        )
-
-    @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(  # noqa
-        request: Request,
-        exc: RequestValidationError,
-    ):
-        """Обработчик ошибок валидации."""
-        sentry_sdk.capture_exception(exc)
-        return ORJSONResponse(
-            status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
-            content={'detail': exc.errors()},
+            content={'detail': str(exc)},
         )
 
     # Подключение роутеров.
