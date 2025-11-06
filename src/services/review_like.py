@@ -51,16 +51,17 @@ class ReviewLikeService:
         cls,
         user_id: UUID,
         review_id: UUID,
-    ) -> Optional[ReviewLike]:
+    ) -> ReviewLike:
         """Удаляет лайк/дизлайк рецензии."""
         review_like = await ReviewLike.find_one(
             ReviewLike.user_id == user_id,
             ReviewLike.review_id == review_id,
         )
-
         if review_like is None:
-            return None
-
+            raise HTTPException(
+                status_code=HTTPStatus.NOT_FOUND,
+                detail='Лайк/дизлайк не найден',
+            )
         await review_like.delete()
         return review_like
 

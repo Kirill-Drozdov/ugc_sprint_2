@@ -1,8 +1,7 @@
 from http import HTTPStatus
-import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Query
 
 from schemas.review import ReviewCreate, ReviewResponse, ReviewUpdate
 from services.review import ReviewService
@@ -19,7 +18,6 @@ router = APIRouter()
 )
 async def create_review(
     review: ReviewCreate,
-    logger: logging.Logger = Depends(logging.getLogger),
 ) -> ReviewResponse:
     """Создание рецензии на кинопроизведение.
 
@@ -29,14 +27,8 @@ async def create_review(
     - **author_name**: имя автора.
     - **rating**: оценка от 0 до 10 (опционально).
     """
-    try:
-        new_review = await ReviewService.create_review(review)
-        return await ReviewService.get_review(new_review.id, review.user_id)
-    except HTTPException:
-        raise
-    except Exception as error:
-        logger.error(f'Ошибка при создании рецензии: {error}')
-        raise
+    new_review = await ReviewService.create_review(review)
+    return await ReviewService.get_review(new_review.id, review.user_id)
 
 
 @router.put(
@@ -51,7 +43,6 @@ async def update_review(
     review_data: ReviewUpdate,
     # TODO Получать через авторизацию JWT.
     user_id: UUID | None = None,
-    logger: logging.Logger = Depends(logging.getLogger),
 ) -> ReviewResponse:
     """Обновление рецензии.
 
@@ -63,17 +54,11 @@ async def update_review(
     - **dislikes_count**: число дизлайков.
     - **user_vote**: какую оценку дал пользователь.
     """
-    try:
-        updated_review = await ReviewService.update_review(
-            review_id,
-            review_data,
-        )
-        return await ReviewService.get_review(updated_review.id, user_id)
-    except HTTPException:
-        raise
-    except Exception as error:
-        logger.error(f'Ошибка при обновлении рецензии: {error}')
-        raise
+    updated_review = await ReviewService.update_review(
+        review_id,
+        review_data,
+    )
+    return await ReviewService.get_review(updated_review.id, user_id)
 
 
 @router.get(
@@ -87,7 +72,6 @@ async def get_review(
     review_id: UUID,
     # TODO Получать через авторизацию JWT.
     user_id: UUID | None = None,
-    logger: logging.Logger = Depends(logging.getLogger),
 ) -> ReviewResponse:
     """Получение рецензии по ID.
 
@@ -99,13 +83,7 @@ async def get_review(
     - **dislikes_count**: число дизлайков.
     - **user_vote**: какую оценку дал пользователь.
     """
-    try:
-        return await ReviewService.get_review(review_id, user_id)
-    except HTTPException:
-        raise
-    except Exception as error:
-        logger.error(f'Ошибка при получении рецензии: {error}')
-        raise
+    return await ReviewService.get_review(review_id, user_id)
 
 
 @router.get(
@@ -121,7 +99,6 @@ async def get_filmwork_reviews(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     sort_by: str = Query('created_at', regex='^(created_at|rating)$'),
-    logger: logging.Logger = Depends(logging.getLogger),
 ) -> list[ReviewResponse]:
     """Получение рецензий для кинопроизведения с сортировкой.
 
@@ -133,17 +110,13 @@ async def get_filmwork_reviews(
     - **dislikes_count**: число дизлайков.
     - **user_vote**: какую оценку дал пользователь.
     """
-    try:
-        return await ReviewService.get_filmwork_reviews(
-            filmwork_id,
-            user_id,
-            skip,
-            limit,
-            sort_by,
-        )
-    except Exception as error:
-        logger.error(f'Ошибка при получении рецензий: {error}')
-        raise
+    return await ReviewService.get_filmwork_reviews(
+        filmwork_id,
+        user_id,
+        skip,
+        limit,
+        sort_by,
+    )
 
 
 @router.get(
@@ -155,7 +128,6 @@ async def get_filmwork_reviews(
 )
 async def get_user_reviews(
     user_id: UUID,
-    logger: logging.Logger = Depends(logging.getLogger),
 ) -> list[ReviewResponse]:
     """Получение всех рецензий пользователя.
 
@@ -167,11 +139,7 @@ async def get_user_reviews(
     - **dislikes_count**: число дизлайков.
     - **user_vote**: какую оценку дал пользователь.
     """
-    try:
-        return await ReviewService.get_user_reviews(user_id)
-    except Exception as error:
-        logger.error(f'Ошибка при получении рецензий пользователя: {error}')
-        raise
+    return await ReviewService.get_user_reviews(user_id)
 
 
 @router.delete(
@@ -184,8 +152,7 @@ async def get_user_reviews(
 async def delete_review(
     review_id: UUID,
     # TODO Получать через авторизацию JWT.
-    user_id: UUID | None = None,
-    logger: logging.Logger = Depends(logging.getLogger),
+    user_id: UUID,
 ) -> ReviewResponse:
     """Удаление рецензии.
 
@@ -197,12 +164,4 @@ async def delete_review(
     - **dislikes_count**: число дизлайков.
     - **user_vote**: какую оценку дал пользователь.
     """
-    try:
-        review = await ReviewService.get_review(review_id, user_id)
-        await ReviewService.delete_review(review_id)
-        return review
-    except HTTPException:
-        raise
-    except Exception as error:
-        logger.error(f'Ошибка при удалении рецензии: {error}')
-        raise
+    return await ReviewService.delete_review(user_id, review_id)
