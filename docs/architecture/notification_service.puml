@@ -1,0 +1,26 @@
+@startuml
+skinparam componentStyle uml2
+actor Администратор_киносервиса as Admin
+actor Пользователь as User
+component MsgAdminPanel
+component UgcService
+component MsgAPI
+component Transmitter
+component EventGenerator
+component Scheduler
+database MsgDB
+queue MsgBroker
+
+Admin -> MsgAdminPanel: Создание рассылки
+MsgAdminPanel -> MsgAPI
+EventGenerator -down-> MsgAPI: Автоматическая генерация событий
+UgcService -up-> MsgAPI: Трансляция единичных событий
+MsgAPI -> MsgBroker: Трансляция мгновенных событий
+Scheduler -up-> MsgBroker: Трансляция отложенных сообщений
+MsgAPI -> MsgDB
+Transmitter -> MsgDB
+Scheduler -up-> MsgDB
+MsgBroker -up-> Transmitter
+Transmitter -> User: Отправка сообщений
+
+@enduml
